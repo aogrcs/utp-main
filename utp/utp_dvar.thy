@@ -163,6 +163,8 @@ record dname =
   dname_name :: "string"
   dname_card :: "ucard"
 
+declare dname.splits [alpha_splits]
+
 text {* A vstore is a function mapping deep variable names to corresponding values in the universe, such
         that the deep variables specified cardinality is matched by the value it points to. *}
 
@@ -227,15 +229,18 @@ proof -
     by (metis (full_types) uinject_inv v)
   show ?thesis
   proof (simp add: dvar_lens_def lens_indep_def, transfer, auto simp add: fun_upd_twist)
-    fix ya :: dname
+    fix y :: dname
     assume a1: "ucard_of (TYPE('b)::'b itself) = ucard_of (TYPE('a)::'a itself)"
-    assume "dname_card ya = ucard_of (TYPE('a)::'a itself)"
-    assume a2: "\<forall>u v \<sigma>. (\<forall>x. \<sigma> x \<in> \<U>(dname_card x)) \<longrightarrow> \<sigma>(ya := uinject (u::'a)) = \<sigma>(ya := uinject (v::'b)) \<and> (uproject (uinject v)::'a) = uproject (\<sigma> ya) \<and> (uproject (uinject u)::'b) = uproject (\<sigma> ya)"
+    assume "dname_card y = ucard_of (TYPE('a)::'a itself)"
+    assume a2: 
+      "\<forall> \<sigma>. (\<forall>x. \<sigma> x \<in> \<U>(dname_card x)) \<longrightarrow> (\<forall> v u. \<sigma>(y := uinject (u::'a)) = \<sigma>(y := uinject (v::'b)))"
+      "\<forall> \<sigma>. (\<forall>x. \<sigma> x \<in> \<U>(dname_card x)) \<longrightarrow> (\<forall> v. (uproject (uinject v)::'a) = uproject (\<sigma> y))"
+      "\<forall> \<sigma>. (\<forall>x. \<sigma> x \<in> \<U>(dname_card x)) \<longrightarrow> (\<forall> u. (uproject (uinject u)::'b) = uproject (\<sigma> y))"
     obtain NN :: "vstore \<Rightarrow> dname \<Rightarrow> nat set" where
       "\<And>v. \<forall>d. NN v d \<in> \<U>(dname_card d)"
       by (metis (lifting) Abs_vstore_cases mem_Collect_eq)
     then show False
-      using a2 a1 by (metis uinject_card uproject_inv uv)
+      using a2 a1 by (metis fun_upd_same uv) 
   qed
 qed
 
@@ -254,7 +259,7 @@ definition [simp]: "out_dvar x = out_var (x\<up>)"
 adhoc_overloading
   ivar in_dvar and ovar out_dvar and svar dvar_lift
 
-lemma uvar_dvar: "uvar (x\<up>)"
+lemma uvar_dvar: "vwb_lens (x\<up>)"
   by (auto intro: comp_vwb_lens simp add: dvar_lift_def)
 
 text {* Deep variables with different names are independent *}
@@ -296,7 +301,7 @@ translations
 
 definition "MkDVar x = \<lceil>x\<rceil>\<^sub>d\<up>"
 
-lemma uvar_MkDVar [simp]: "uvar (MkDVar x)"
+lemma uvar_MkDVar [simp]: "vwb_lens (MkDVar x)"
   by (simp add: MkDVar_def uvar_dvar)
 
 lemma MkDVar_indep [simp]: "x \<noteq> y \<Longrightarrow> MkDVar x \<bowtie> MkDVar y"

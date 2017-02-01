@@ -330,32 +330,32 @@ text {* Unrestriction is effectively semantic freshness; an expression is unrest
 
 lemma vexpr_unrest [unrest]:
   "x \<sharp> v \<Longrightarrow> x \<sharp> \<lfloor>v\<rfloor>\<^sub>v"
-  by pred_tac
+  by pred_auto
 
 lemma vvar_unrest [unrest]:
-  "\<lbrakk> uvar x; x \<bowtie> y \<rbrakk> \<Longrightarrow> y \<sharp> &\<^sub>vx"
-  by pred_tac
+  "x \<bowtie> y \<Longrightarrow> y \<sharp> &\<^sub>vx"
+  by pred_auto
 
 lemma vlit_unrest [unrest]:
   "x \<sharp> \<guillemotleft>v\<guillemotright>\<^sub>v"
-  by pred_tac
+  by pred_auto
 
 lemma vuop_unrest [unrest]:
   "x \<sharp> v \<Longrightarrow> x \<sharp> vuop f v"
-  by pred_tac
+  by pred_auto
 
 lemma vbop_unrest [unrest]:
   "\<lbrakk> x \<sharp> u; x \<sharp> v \<rbrakk> \<Longrightarrow> x \<sharp> vbop f u v"
-  by pred_tac
+  by pred_auto
 
 lemma vtop_unrest [unrest]:
   "\<lbrakk> x \<sharp> u; x \<sharp> v; x \<sharp> w \<rbrakk> \<Longrightarrow> x \<sharp> vtop f u v w"
-  by pred_tac
+  by pred_auto
 
 subsection {* VDM Substitution *}
 
 lemma vsubst_lookup_upd [usubst]:
-  assumes "uvar x" "\<D>\<^sub>v(v) = true\<^sub>v"
+  assumes "vwb_lens x" "\<D>\<^sub>v(v) = true\<^sub>v"
   shows "\<langle>\<sigma>(x \<mapsto>\<^sub>s \<lfloor>v\<rfloor>\<^sub>v)\<rangle>\<^sub>v x = v"
   using assms
   apply (simp add: subst_upd_uvar_def, transfer)
@@ -363,7 +363,7 @@ lemma vsubst_lookup_upd [usubst]:
 done
 
 lemma vsubst_lookup_upd_indep [usubst]:
-  assumes "uvar x" "x \<bowtie> y"
+  assumes "vwb_lens x" "x \<bowtie> y"
   shows "\<langle>\<sigma>(y \<mapsto>\<^sub>s v)\<rangle>\<^sub>v x = \<langle>\<sigma>\<rangle>\<^sub>v x"
   using assms
   by (simp add: subst_upd_uvar_def, transfer, simp)
@@ -373,35 +373,35 @@ lemma vvar_subst [usubst]: "\<sigma> \<dagger> &\<^sub>vx = \<langle>\<sigma>\<r
 
 lemma vsubst_vnot [usubst]:
   "\<sigma> \<dagger> (\<not>\<^sub>v p ) = (\<not>\<^sub>v (\<sigma> \<dagger> p))"
-  by pred_tac
+  by pred_auto
 
 lemma vsubst_vconj [usubst]:
   "\<sigma> \<dagger> (p \<and>\<^sub>v q) = (\<sigma> \<dagger> p \<and>\<^sub>v \<sigma> \<dagger> q)"
-  by pred_tac
+  by pred_auto
 
 lemma vsubst_vdisj [usubst]:
   "\<sigma> \<dagger> (p \<or>\<^sub>v q) = (\<sigma> \<dagger> p \<or>\<^sub>v \<sigma> \<dagger> q)"
-  by pred_tac
+  by pred_auto
 
 lemma vsubst_vlit [usubst]:
   "\<sigma> \<dagger> \<guillemotleft>v\<guillemotright>\<^sub>v = \<guillemotleft>v\<guillemotright>\<^sub>v"
-  by pred_tac
+  by pred_auto
 
 lemma vsubst_vuop [usubst]: 
   "\<sigma> \<dagger> (vuop f x) = vuop f (\<sigma> \<dagger> x)"
-  by pred_tac
+  by pred_auto
 
 lemma vsubst_vbop [usubst]: 
   "\<sigma> \<dagger> (vbop f x y) = vbop f (\<sigma> \<dagger> x) (\<sigma> \<dagger> y)"
-  by pred_tac
+  by pred_auto
 
 lemma vsubst_vtop [usubst]: 
   "\<sigma> \<dagger> (vtop f x y z) = vtop f (\<sigma> \<dagger> x) (\<sigma> \<dagger> y) (\<sigma> \<dagger> z)"
-  by pred_tac
+  by pred_auto
 
 lemma vsubst_vexpr [usubst]:
   "\<sigma> \<dagger> \<lfloor>v\<rfloor>\<^sub>v = \<lfloor>\<sigma> \<dagger> v\<rfloor>\<^sub>v"
-  by pred_tac
+  by pred_auto
 
 subsection {* Proof setup *}
 
@@ -434,10 +434,10 @@ lemma bpfun'_defined [intro,simp]:
 text {* We also set up some useful default simplifications. *}
 
 lemma true_vdm [simp]: "\<lfloor>true\<^sub>v\<rfloor>\<^sub>v = true"
-  by pred_tac
+  by pred_auto
 
 lemma false_vdm [simp]: "\<lfloor>false\<^sub>v\<rfloor>\<^sub>v = false"
-  by pred_tac
+  by pred_auto
 
 lemma vconj_left_unit [simp]: "(true\<^sub>v \<and>\<^sub>v p) = p"
   by (transfer, simp)
@@ -469,10 +469,10 @@ lemma bpfun'_simp [simp]: "bpfun' f (x, y) = Some (f x y)"
 text {* Here we are using introduction / elimination to prove some simple properties *}
 
 lemma example1: "(\<forall>\<^sub>v x : Nats \<bullet> \<guillemotleft>x\<guillemotright>\<^sub>v >\<^sub>v \<guillemotleft>1 :: nat\<guillemotright>\<^sub>v) = false\<^sub>v"
-  by pred_tac
+  by pred_auto
 
 lemma example2: "(\<exists>\<^sub>v x : Nats \<bullet> \<guillemotleft>x\<guillemotright>\<^sub>v >\<^sub>v \<guillemotleft>1 :: nat\<guillemotright>\<^sub>v) = true\<^sub>v"
-  by pred_tac
+  by pred_auto
 
 subsection {* Definedness laws *}
 
@@ -556,7 +556,7 @@ done
 
 lemma vdefined_undef [simp]:
   "\<D>\<^sub>v(\<bottom>\<^sub>v) = false\<^sub>v"
-  by (pred_tac)
+  by (pred_auto)
 
 lemma vdefined_vvar [simp]: 
   fixes x :: "('a, '\<alpha>) uvar" 
@@ -629,7 +629,7 @@ translations
 lemma vassign_undef:
   fixes x :: "('a, '\<alpha>) uvar"
   shows "(x :=\<^sub>v \<bottom>\<^sub>v) = \<bottom>\<^sub>D"
-  by rel_tac
+  by rel_auto
 
 lemma H1_H3_vdm_assign [simp]:
   fixes x :: "('a, '\<alpha>) uvar" 
@@ -639,7 +639,7 @@ lemma H1_H3_vdm_assign [simp]:
 lemma hd_nil_abort: 
   fixes x :: "('a, '\<alpha>) uvar"
   shows "(x :=\<^sub>v hd\<^sub>v([]\<^sub>v)) = true"
-  by rel_tac  
+  by rel_auto  
 
 definition wp_vdm :: "('\<alpha>, '\<beta>) relation_d \<Rightarrow> '\<beta> vpred \<Rightarrow> '\<alpha> vpred" (infix "wp\<^sub>v" 60)
 where "Q wp\<^sub>v r = \<lceil>Q wp\<^sub>D \<lfloor>r\<rfloor>\<^sub>v\<rceil>\<^sub>v"
@@ -653,29 +653,48 @@ theorem wpd_vdm_assign [wp]:
   by (simp add: vassign_uvar_def wp)
 
 lemma wp_calc_test_1:
-  "\<lbrakk> uvar x; uvar y \<rbrakk> \<Longrightarrow> (y :=\<^sub>v hd\<^sub>v(&\<^sub>vx)) wp\<^sub>D true 
-                          = \<lfloor>len\<^sub>v(&\<^sub>vx) >\<^sub>v \<guillemotleft>0\<guillemotright>\<^sub>v\<rfloor>\<^sub>v"
+  "\<lbrakk> vwb_lens x; vwb_lens y \<rbrakk> \<Longrightarrow> (y :=\<^sub>v hd\<^sub>v(&\<^sub>vx)) wp\<^sub>D true 
+                                  = \<lfloor>len\<^sub>v(&\<^sub>vx) >\<^sub>v \<guillemotleft>0\<guillemotright>\<^sub>v\<rfloor>\<^sub>v"
   by (simp add: wp usubst)
 
 lemma wp_calc_test_2:
-  "\<lbrakk> uvar x; uvar y \<rbrakk> \<Longrightarrow> (y :=\<^sub>v 1 / hd\<^sub>v(&\<^sub>vx)) wp\<^sub>D true 
-                          = \<lfloor>len\<^sub>v(&\<^sub>vx) >\<^sub>v \<guillemotleft>0\<guillemotright>\<^sub>v \<and>\<^sub>v hd\<^sub>v(&\<^sub>vx) <>\<^sub>v 0\<rfloor>\<^sub>v"
+  "\<lbrakk> vwb_lens x; vwb_lens y \<rbrakk> \<Longrightarrow> (y :=\<^sub>v 1 / hd\<^sub>v(&\<^sub>vx)) wp\<^sub>D true 
+                                  = \<lfloor>len\<^sub>v(&\<^sub>vx) >\<^sub>v \<guillemotleft>0\<guillemotright>\<^sub>v \<and>\<^sub>v hd\<^sub>v(&\<^sub>vx) <>\<^sub>v 0\<rfloor>\<^sub>v"
   by (simp add: wp usubst)
 
 subsection {* VDM-SL operations *}
 
-definition vdm_sl_op :: "(bool, '\<alpha> \<times> '\<alpha>) vexpr \<Rightarrow> (bool, '\<alpha> \<times> '\<alpha>) vexpr \<Rightarrow> '\<alpha> hrelation_d \<Rightarrow> '\<alpha> hrelation_d"
+definition vdm_sl_op :: "(bool, '\<alpha>) vexpr \<Rightarrow> (bool, '\<alpha> \<times> '\<alpha>) vexpr \<Rightarrow> '\<alpha> hrelation_d \<Rightarrow> '\<alpha> hrelation_d"
   ("[pre _ post _ body _]\<^sub>v")
-where "[pre pr post po body bd]\<^sub>v = (\<lfloor>\<D>\<^sub>v(pr)\<rfloor>\<^sub>v \<and> \<lfloor>pr\<rfloor>\<^sub>v) \<turnstile>\<^sub>r (\<lfloor>\<D>\<^sub>v(po)\<rfloor>\<^sub>v \<and> \<lfloor>po\<rfloor>\<^sub>v \<and> post\<^sub>D(bd))"
+where [upred_defs]: "[pre pr post po body bd]\<^sub>v = (\<lfloor>\<D>\<^sub>v(pr)\<rfloor>\<^sub>v \<and> \<lfloor>pr\<rfloor>\<^sub>v) \<turnstile>\<^sub>n (\<lfloor>\<D>\<^sub>v(po)\<rfloor>\<^sub>v \<and> \<lfloor>po\<rfloor>\<^sub>v \<and> post\<^sub>D(bd))"
+
+lemma vdm_sl_op_H1_H3 [closure]:
+  "[pre p post Q body R]\<^sub>v is \<^bold>N"
+  by (simp add: vdm_sl_op_def, metis H1_rdesign H3_ndesign Healthy_def ndesign_def)
+
+lemma wp_vdm_sl_op [wp]: "[pre p post Q body R]\<^sub>v wp\<^sub>D r = ((\<lfloor>\<D>\<^sub>v(p)\<rfloor>\<^sub>v \<and> \<lfloor>p\<rfloor>\<^sub>v) \<and> (\<lfloor>\<D>\<^sub>v(Q)\<rfloor>\<^sub>v \<and> \<lfloor>Q\<rfloor>\<^sub>v \<and> post\<^sub>D(R)) wp r)"
+  by (simp add: vdm_sl_op_def wp)
 
 (*
 lemma vdm_sl_op_true_pre_post [simp]:
   "[pre true\<^sub>v post true\<^sub>v body p \<turnstile>\<^sub>r q]\<^sub>v = true \<turnstile>\<^sub>r q"
-  by (simp add: vdm_sl_op_def, pred_tac)
+  by (simp add: vdm_sl_op_def, pred_auto)
 
 lemma vdm_sl_op_false_pre [simp]:
   "[pre false\<^sub>v post p body b]\<^sub>v = true"
-  by (simp add: vdm_sl_op_def, pred_tac)
+  by (simp add: vdm_sl_op_def, pred_auto)
 *)
+
+subsection {* Support for local variables *}
+
+alphabet vlocal = 
+  vlocals :: "vstore"
+
+instantiation vlocal_ext :: (type) vst
+begin
+  definition [simp]: "vstore_lens_vlocal_ext = vlocals"
+instance
+  by (intro_classes, unfold_locales, simp_all)
+end
 
 end

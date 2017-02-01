@@ -1,16 +1,19 @@
 section {* UTP expressions *}
 
 theory utp_expr
-imports 
+imports
   utp_var
   utp_dvar
+  (* utp_avar *)
 begin
+
+no_notation BNF_Def.convol ("\<langle>(_,/ _)\<rangle>")
 
 text {* Before building the predicate model, we will build a model of expressions that generalise
         alphabetised predicates. Expressions are represented semantically as mapping from
         the alphabet to the expression's type. This general model will allow us to unify
         all constructions under one type. All definitions in the file are given using
-        the \emph{lifting} package. 
+        the \emph{lifting} package.
 
         Since we have two kinds of variable (deep and shallow) in the model, we will also need
         two versions of each construct that takes a variable. We make use of adhoc-overloading
@@ -24,7 +27,7 @@ lemma uexpr_eq_iff:
   "e = f \<longleftrightarrow> (\<forall> b. \<lbrakk>e\<rbrakk>\<^sub>e b = \<lbrakk>f\<rbrakk>\<^sub>e b)"
   using Rep_uexpr_inject[of e f, THEN sym] by (auto)
 
-named_theorems ueval
+named_theorems ueval and lit_simps
 
 setup_lifting type_definition_uexpr
 
@@ -45,20 +48,25 @@ where "dvar_exp x = var (dvar_lift x)"
 
 text {* A literal is simply a constant function expression, always returning the same value. *}
 
-lift_definition lit :: "'t \<Rightarrow> ('t, '\<alpha>) uexpr" 
+lift_definition lit :: "'t \<Rightarrow> ('t, '\<alpha>) uexpr"
   is "\<lambda> v b. v" .
 
 text {* We define lifting for unary, binary, and ternary functions, that simply apply
         the function to all possible results of the expressions. *}
 
-lift_definition uop :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a, '\<alpha>) uexpr \<Rightarrow> ('b, '\<alpha>) uexpr" 
+lift_definition uop :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a, '\<alpha>) uexpr \<Rightarrow> ('b, '\<alpha>) uexpr"
   is "\<lambda> f e b. f (e b)" .
-lift_definition bop :: 
-  "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> ('a, '\<alpha>) uexpr \<Rightarrow> ('b, '\<alpha>) uexpr \<Rightarrow> ('c, '\<alpha>) uexpr" 
+lift_definition bop ::
+  "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> ('a, '\<alpha>) uexpr \<Rightarrow> ('b, '\<alpha>) uexpr \<Rightarrow> ('c, '\<alpha>) uexpr"
   is "\<lambda> f u v b. f (u b) (v b)" .
-lift_definition trop :: 
-  "('a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> 'd) \<Rightarrow> ('a, '\<alpha>) uexpr \<Rightarrow> ('b, '\<alpha>) uexpr \<Rightarrow> ('c, '\<alpha>) uexpr \<Rightarrow> ('d, '\<alpha>) uexpr" 
+lift_definition trop ::
+  "('a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> 'd) \<Rightarrow> ('a, '\<alpha>) uexpr \<Rightarrow> ('b, '\<alpha>) uexpr \<Rightarrow> ('c, '\<alpha>) uexpr \<Rightarrow> ('d, '\<alpha>) uexpr"
   is "\<lambda> f u v w b. f (u b) (v b) (w b)" .
+lift_definition qtop ::
+  "('a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> 'e) \<Rightarrow> 
+   ('a, '\<alpha>) uexpr \<Rightarrow> ('b, '\<alpha>) uexpr \<Rightarrow> ('c, '\<alpha>) uexpr \<Rightarrow> ('d, '\<alpha>) uexpr \<Rightarrow>
+   ('e, '\<alpha>) uexpr"
+  is "\<lambda> f u v w x b. f (u b) (v b) (w b) (x b)" .
 
 text {* We also define a UTP expression version of function abstract *}
 
@@ -179,10 +187,7 @@ instance uexpr :: (cancel_semigroup_add, type) cancel_semigroup_add
   by (intro_classes) (simp add: plus_uexpr_def, transfer, simp add: fun_eq_iff)+
 
 instance uexpr :: (cancel_ab_semigroup_add, type) cancel_ab_semigroup_add
-  by (intro_classes) (simp add: plus_uexpr_def minus_uexpr_def, transfer, simp add: fun_eq_iff add.commute diff_diff_add)+
-
-instance uexpr :: (cancel_monoid_add, type) cancel_monoid_add
-  by (intro_classes, simp_all add: plus_uexpr_def minus_uexpr_def zero_uexpr_def) (transfer, auto)+
+  by (intro_classes, (simp add: plus_uexpr_def minus_uexpr_def, transfer, simp add: fun_eq_iff add.commute cancel_ab_semigroup_add_class.diff_diff_add)+)
 
 instance uexpr :: (group_add, type) group_add
   by (intro_classes)
@@ -192,22 +197,26 @@ instance uexpr :: (ab_group_add, type) ab_group_add
   by (intro_classes)
      (simp add: plus_uexpr_def uminus_uexpr_def minus_uexpr_def zero_uexpr_def, transfer, simp)+
 
-instantiation uexpr :: (order, type) order
+instantiation uexpr :: (ord, type) ord
 begin
   lift_definition less_eq_uexpr :: "('a, 'b) uexpr \<Rightarrow> ('a, 'b) uexpr \<Rightarrow> bool"
   is "\<lambda> P Q. (\<forall> A. P A \<le> Q A)" .
   definition less_uexpr :: "('a, 'b) uexpr \<Rightarrow> ('a, 'b) uexpr \<Rightarrow> bool"
   where "less_uexpr P Q = (P \<le> Q \<and> \<not> Q \<le> P)"
-instance proof
+instance ..
+end
+
+
+instance uexpr :: (order, type) order
+proof
   fix x y z :: "('a, 'b) uexpr"
   show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by (simp add: less_uexpr_def)
   show "x \<le> x" by (transfer, auto)
-  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" 
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
     by (transfer, blast intro:order.trans)
   show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
     by (transfer, rule ext, simp add: eq_iff)
 qed
-end
 
 instance uexpr :: (ordered_ab_group_add, type) ordered_ab_group_add
   by (intro_classes) (simp add: plus_uexpr_def, transfer, simp)
@@ -217,6 +226,16 @@ instance uexpr :: (ordered_ab_group_add_abs, type) ordered_ab_group_add_abs
   apply (simp add: abs_uexpr_def zero_uexpr_def plus_uexpr_def uminus_uexpr_def, transfer, simp add: abs_ge_self abs_le_iff abs_triangle_ineq)+
   apply (metis ab_group_add_class.ab_diff_conv_add_uminus abs_ge_minus_self abs_ge_self add_mono_thms_linordered_semiring(1))
 done
+
+lemma uexpr_diff_zero [simp]: 
+  fixes a :: "('\<alpha>::ordered_cancel_monoid_diff, 'a) uexpr"
+  shows "a - 0 = a"
+  by (simp add: minus_uexpr_def zero_uexpr_def, transfer, auto)
+
+lemma uexpr_add_diff_cancel_left [simp]: 
+  fixes a b :: "('\<alpha>::ordered_cancel_monoid_diff, 'a) uexpr"
+  shows "(a + b) - a = b"
+  by (simp add: minus_uexpr_def plus_uexpr_def, transfer, auto)
 
 instance uexpr :: (semiring, type) semiring
   by (intro_classes) (simp add: plus_uexpr_def times_uexpr_def, transfer, simp add: fun_eq_iff add.commute semiring_class.distrib_right semiring_class.distrib_left)+
@@ -230,7 +249,11 @@ instance uexpr :: (numeral, type) numeral
 text {* Set up automation for numerals *}
 
 lemma numeral_uexpr_rep_eq: "\<lbrakk>numeral x\<rbrakk>\<^sub>e b = numeral x"
-  by (induct x, simp_all add: plus_uexpr_def one_uexpr_def numeral.simps lit.rep_eq bop.rep_eq)
+apply (induct x)
+apply (simp add: lit.rep_eq one_uexpr_def)
+apply (simp add: bop.rep_eq numeral_Bit0 plus_uexpr_def)
+apply (simp add: bop.rep_eq lit.rep_eq numeral_code(3) one_uexpr_def plus_uexpr_def)
+done
 
 lemma numeral_uexpr_simp: "numeral x = \<guillemotleft>numeral x\<guillemotright>"
   by (simp add: uexpr_eq_iff numeral_uexpr_rep_eq lit.rep_eq)
@@ -259,7 +282,7 @@ definition "LZero = 0"
 
 adhoc_overloading
   uempty LZero and uempty LNil and
-  uapply fun_apply and uapply nth and uapply pfun_app and 
+  uapply fun_apply and uapply nth and uapply pfun_app and
   uapply ffun_app and uapply cgf_apply and uapply tt_apply and
   uupd pfun_upd and uupd ffun_upd and uupd list_update and
   udom Domain and udom pdom and udom fdom and udom seq_dom and
@@ -353,10 +376,10 @@ translations
   "xs \<restriction>\<^sub>u A"   == "CONST bop CONST seq_filter xs A"
   "A \<upharpoonleft>\<^sub>u xs"   == "CONST bop (op \<upharpoonleft>\<^sub>l) A xs"
   "x <\<^sub>u y"   == "CONST bop (op <) x y"
-  "x \<le>\<^sub>u y"   == "CONST bop (op \<le>) x y" 
+  "x \<le>\<^sub>u y"   == "CONST bop (op \<le>) x y"
   "x >\<^sub>u y"   == "y <\<^sub>u x"
-  "x \<ge>\<^sub>u y"   == "y \<le>\<^sub>u x" 
-  "min\<^sub>u(x, y)"  == "CONST bop (CONST min) x y" 
+  "x \<ge>\<^sub>u y"   == "y \<le>\<^sub>u x"
+  "min\<^sub>u(x, y)"  == "CONST bop (CONST min) x y"
   "max\<^sub>u(x, y)"  == "CONST bop (CONST max) x y"
   "gcd\<^sub>u(x, y)"  == "CONST bop (CONST gcd) x y"
   "finite\<^sub>u(x)" == "CONST uop (CONST finite) x"
@@ -404,19 +427,19 @@ syntax
   "_uset_atLeastLessThan" :: "('a, '\<alpha>) uexpr \<Rightarrow> ('a, '\<alpha>) uexpr \<Rightarrow> ('a set, '\<alpha>) uexpr" ("(1{_..<_}\<^sub>u)")
   "_uset_compr" :: "id \<Rightarrow> ('a set, '\<alpha>) uexpr \<Rightarrow> (bool, '\<alpha>) uexpr \<Rightarrow> ('b, '\<alpha>) uexpr \<Rightarrow> ('b set, '\<alpha>) uexpr" ("(1{_ :/ _ |/ _ \<bullet>/ _}\<^sub>u)")
 
-lift_definition ZedSetCompr :: 
+lift_definition ZedSetCompr ::
   "('a set, '\<alpha>) uexpr \<Rightarrow> ('a \<Rightarrow> (bool, '\<alpha>) uexpr \<times> ('b, '\<alpha>) uexpr) \<Rightarrow> ('b set, '\<alpha>) uexpr"
 is "\<lambda> A PF b. { snd (PF x) b | x. x \<in> A b \<and> fst (PF x) b}" .
 
 translations
   "{x..y}\<^sub>u" == "CONST bop CONST atLeastAtMost x y"
   "{x..<y}\<^sub>u" == "CONST bop CONST atLeastLessThan x y"
-  "{x : A | P \<bullet> F}\<^sub>u" == "CONST ZedSetCompr A (\<lambda> x. (P, F))" 
+  "{x : A | P \<bullet> F}\<^sub>u" == "CONST ZedSetCompr A (\<lambda> x. (P, F))"
 
 text {* Lifting limits *}
 
 definition "ulim_left = (\<lambda> p f. Lim (at_left p) f)"
-definition "ulim_right = (\<lambda> p f. Lim (at_right p) f)" 
+definition "ulim_right = (\<lambda> p f. Lim (at_right p) f)"
 definition "ucont_on = (\<lambda> f A. continuous_on A f)"
 
 syntax
@@ -425,7 +448,7 @@ syntax
   "_ucont_on"   :: "logic \<Rightarrow> logic \<Rightarrow> logic" (infix "cont-on\<^sub>u" 90)
 
 translations
-  "lim\<^sub>u(x \<rightarrow> p\<^sup>-)(e)" == "CONST bop CONST ulim_left p (\<lambda> x \<bullet> e)" 
+  "lim\<^sub>u(x \<rightarrow> p\<^sup>-)(e)" == "CONST bop CONST ulim_left p (\<lambda> x \<bullet> e)"
   "lim\<^sub>u(x \<rightarrow> p\<^sup>+)(e)" == "CONST bop CONST ulim_right p (\<lambda> x \<bullet> e)"
   "f cont-on\<^sub>u A"     == "CONST bop CONST continuous_on A f"
 
@@ -468,6 +491,9 @@ lemma bop_ueval [ueval]: "\<lbrakk>bop f x y\<rbrakk>\<^sub>eb = f (\<lbrakk>x\<
 lemma trop_ueval [ueval]: "\<lbrakk>trop f x y z\<rbrakk>\<^sub>eb = f (\<lbrakk>x\<rbrakk>\<^sub>eb) (\<lbrakk>y\<rbrakk>\<^sub>eb) (\<lbrakk>z\<rbrakk>\<^sub>eb)"
   by (transfer, simp)
 
+lemma qtop_ueval [ueval]: "\<lbrakk>qtop f x y z w\<rbrakk>\<^sub>eb = f (\<lbrakk>x\<rbrakk>\<^sub>eb) (\<lbrakk>y\<rbrakk>\<^sub>eb) (\<lbrakk>z\<rbrakk>\<^sub>eb) (\<lbrakk>w\<rbrakk>\<^sub>eb)"
+  by (transfer, simp)
+
 declare uexpr_defs [ueval]
 
 subsection {* Misc laws *}
@@ -475,7 +501,44 @@ subsection {* Misc laws *}
 lemma tail_cons [simp]: "tail\<^sub>u(\<langle>x\<rangle> ^\<^sub>u xs) = xs"
   by (transfer, simp)
 
-lemma lit_num_simps: "\<guillemotleft>0\<guillemotright> = 0" "\<guillemotleft>1\<guillemotright> = 1" "\<guillemotleft>numeral n\<guillemotright> = numeral n" "\<guillemotleft>- x\<guillemotright> = - \<guillemotleft>x\<guillemotright>"
+subsection {* Literalise tactics *}
+
+text {* The following tactic converts literal HOL expressions to UTP expressions and vice-versa
+        via a collection of simplification rules. The two tactics are called "literalise", which
+        converts UTP to expressions to HOL expressions -- i.e. it pushes them into literals --
+        and unliteralise that reverses this. We collect the equations in a theorem attribute
+        called "lit\_simps". *}
+
+lemma lit_num_simps [lit_simps]: "\<guillemotleft>0\<guillemotright> = 0" "\<guillemotleft>1\<guillemotright> = 1" "\<guillemotleft>numeral n\<guillemotright> = numeral n" "\<guillemotleft>- x\<guillemotright> = - \<guillemotleft>x\<guillemotright>"
   by (simp_all add: ueval, transfer, simp)
 
+lemma lit_arith_simps [lit_simps]:
+  "\<guillemotleft>- x\<guillemotright> = - \<guillemotleft>x\<guillemotright>"
+  "\<guillemotleft>x + y\<guillemotright> = \<guillemotleft>x\<guillemotright> + \<guillemotleft>y\<guillemotright>" "\<guillemotleft>x - y\<guillemotright> = \<guillemotleft>x\<guillemotright> - \<guillemotleft>y\<guillemotright>" 
+  "\<guillemotleft>x * y\<guillemotright> = \<guillemotleft>x\<guillemotright> * \<guillemotleft>y\<guillemotright>" "\<guillemotleft>x / y\<guillemotright> = \<guillemotleft>x\<guillemotright> / \<guillemotleft>y\<guillemotright>"
+  "\<guillemotleft>x div y\<guillemotright> = \<guillemotleft>x\<guillemotright> div \<guillemotleft>y\<guillemotright>"
+  by (simp add: uexpr_defs, transfer, simp)+
+
+lemma lit_fun_simps [lit_simps]: 
+  "\<guillemotleft>i x y z u\<guillemotright> = qtop i \<guillemotleft>x\<guillemotright> \<guillemotleft>y\<guillemotright> \<guillemotleft>z\<guillemotright> \<guillemotleft>u\<guillemotright>"
+  "\<guillemotleft>h x y z\<guillemotright> = trop h \<guillemotleft>x\<guillemotright> \<guillemotleft>y\<guillemotright> \<guillemotleft>z\<guillemotright>"
+  "\<guillemotleft>g x y\<guillemotright> = bop g \<guillemotleft>x\<guillemotright> \<guillemotleft>y\<guillemotright>"
+  "\<guillemotleft>f x\<guillemotright> = uop f \<guillemotleft>x\<guillemotright>"
+  by (transfer, simp)+ 
+
+text {* In general unliteralising converts function applications to corresponding expression
+  liftings. Since some operators, like + and *, have specific operators we also have to
+  use @{thm uexpr_defs} in reverse to correctly interpret these. Moreover, numerals must be handled
+  separately by first simplifying them and then converting them into UTP expression numerals;
+  hence the following two simplification rules. *}
+
+lemma lit_numeral_1: "uop numeral x = Abs_uexpr (\<lambda>b. numeral (\<lbrakk>x\<rbrakk>\<^sub>e b))"
+  by (simp add: uop_def)
+
+lemma lit_numeral_2: "Abs_uexpr (\<lambda> b. numeral v) = numeral v"
+  by (metis lit.abs_eq lit_num_simps(3))
+
+method literalise = (unfold lit_simps[THEN sym])
+method unliteralise = (unfold lit_simps uexpr_defs[THEN sym]; 
+                     (unfold lit_numeral_1 ; (unfold ueval); (unfold lit_numeral_2))?)+
 end

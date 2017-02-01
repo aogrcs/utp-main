@@ -1,5 +1,7 @@
+section {* Lists: extra functions and properties *}
+
 theory List_extra
-imports 
+imports
   Main
   "~~/src/HOL/Library/Sublist"
   "~~/src/HOL/Library/Monad_Syntax"
@@ -60,6 +62,9 @@ lemma sorted_last [simp]: "\<lbrakk> x \<in> set xs; sorted xs \<rbrakk> \<Longr
   apply (metis last_in_set sorted_Cons)+
 done
 
+lemma sorted_map: "\<lbrakk> sorted xs; mono f \<rbrakk> \<Longrightarrow> sorted (map f xs)"
+  by (simp add: monoD sorted_equals_nth_mono)
+
 lemma prefix_length_eq:
   "\<lbrakk> length xs = length ys; prefixeq xs ys \<rbrakk> \<Longrightarrow> xs = ys"
   by (metis not_equal_is_parallel parallel_def)
@@ -87,7 +92,7 @@ lemma prefixeq_map_inj_eq [simp]:
 lemma prefix_Cons_elim [elim]:
   assumes "prefix (x # xs) ys"
   obtains ys' where "ys = x # ys'" "prefix xs ys'"
-  using assms 
+  using assms
   apply (auto elim!: prefixE)
   apply (metis (full_types) prefix_order.le_less prefixeq_Cons_elim)
 done
@@ -109,7 +114,7 @@ lemma prefix_map_inj_eq [simp]:
   by (metis inj_on_map_eq_map map_prefixeqI prefix_map_inj prefix_order.less_le)
 
 lemma prefixeq_drop:
-  "\<lbrakk> drop (length xs) ys = zs; prefixeq xs ys \<rbrakk> 
+  "\<lbrakk> drop (length xs) ys = zs; prefixeq xs ys \<rbrakk>
    \<Longrightarrow> ys = xs @ zs"
   by (metis append_eq_conv_conj prefixeq_def)
 
@@ -124,7 +129,7 @@ text {* We define list minus so that if the second list is not a prefix of the f
         list longer than the combined length is produced. Thus we can always determined from the output
         whether the minus is defined or not. *}
 
-definition "xs - ys = (if (prefixeq ys xs) then drop (length ys) xs else [undefined])"
+definition "xs - ys = (if (prefixeq ys xs) then drop (length ys) xs else [])"
 
 instance ..
 end
@@ -132,10 +137,12 @@ end
 lemma minus_cancel [simp]: "xs - xs = []"
   by (simp add: minus_list_def)
 
+(*
 lemma list_minus_anhil: "xs - ys = [] \<Longrightarrow> xs = ys"
   apply (auto simp add: minus_list_def)
   apply (metis append_Nil2 list.simps(3) prefixeq_drop)
 done
+*)
 
 lemma append_minus [simp]: "(xs @ ys) - xs = ys"
   by (simp add: minus_list_def)
@@ -168,7 +175,7 @@ lemma length_zero_last_concat:
   assumes "length t = 0"
   shows "last (s @ t) = last s"
   by (metis append_Nil2 assms length_0_conv)
-  
+
 lemma length_gt_zero_last_concat:
   assumes "length t > 0"
   shows "last (s @ t) = last t"
@@ -178,7 +185,7 @@ subsection {* Interleaving operations *}
 
 fun interleave :: "'a list \<Rightarrow> 'a list \<Rightarrow> 'a list set" where
 "interleave [] ys = {ys}" |
-"interleave (x # xs) (y # ys) = (Cons x) ` (interleave xs (y # ys)) 
+"interleave (x # xs) (y # ys) = (Cons x) ` (interleave xs (y # ys))
                               \<union> (Cons y) ` (interleave (x # xs) ys)" |
 "interleave xs [] = {xs}"
 
@@ -214,7 +221,7 @@ oops
 
 (* FIXME: What happens if no progress can be made? *)
 fun intersync :: "'a set \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarrow> 'a list set" where
-"intersync s (x # xs) (y # ys) 
+"intersync s (x # xs) (y # ys)
   = (case (x = y , x \<in> s , y \<in> s) of
           (True  , True   , _      ) \<Rightarrow> Cons x ` intersync s xs ys |
           (True  , False  , _      ) \<Rightarrow> ((Cons x ` intersync s xs (y # ys))
@@ -224,9 +231,9 @@ fun intersync :: "'a set \<Rightarrow> 'a list \<Rightarrow> 'a list \<Rightarro
           (False , False  , True   ) \<Rightarrow> Cons x ` intersync s xs (y # ys) |
           (False , False  , False  ) \<Rightarrow> ((Cons x ` intersync s xs (y # ys))
                                          \<union> (Cons y ` intersync s (x # xs) ys)))" |
-"intersync s [] (y # ys) = 
+"intersync s [] (y # ys) =
    (if (y \<in> s) then {[]} else Cons y ` intersync s [] ys)" |
-"intersync s (x # xs) [] = 
+"intersync s (x # xs) [] =
    (if (x \<in> s) then {[]} else Cons x ` intersync s xs [])" |
 "intersync s [] [] = {[]}"
 
@@ -252,9 +259,9 @@ lemma sorted_distinct [intro]: "\<lbrakk> sorted (xs); distinct(xs) \<rbrakk> \<
   apply (induct xs)
   apply (auto)
   apply (smt Suc_lessI diff_le_self distinct.simps(2) le_neq_trans length_Cons lessI less_SucI list.sel(3) nat_neq_iff nth_Cons' nth_eq_iff_index_eq nth_mem nth_tl sorted_equals_nth_mono)
-done 
+done
 
-lemma sorted_is_sorted_list_of_set: 
+lemma sorted_is_sorted_list_of_set:
   assumes "is_sorted_list_of_set A xs"
   shows "sorted(xs)" and "distinct(xs)"
 using assms proof (induct xs arbitrary: A)
@@ -302,10 +309,10 @@ oops
 *)
 
 definition sorted_list_of_set_alt :: "('a::ord) set \<Rightarrow> 'a list" where
-"sorted_list_of_set_alt A = 
+"sorted_list_of_set_alt A =
   (if (A = {}) then [] else (THE xs. is_sorted_list_of_set A xs))"
 
-lemma is_sorted_list_of_set: 
+lemma is_sorted_list_of_set:
   "finite A \<Longrightarrow> is_sorted_list_of_set A (sorted_list_of_set A)"
   apply (simp add: is_sorted_list_of_set_def)
   apply (smt Suc_pred card_length le_less_trans less_imp_diff_less linorder_not_less not_less_eq not_less_iff_gr_or_eq nth_eq_iff_index_eq sorted_list_of_set sorted_nth_mono zero_less_Suc)
@@ -338,7 +345,7 @@ lemma gcp_right [simp]: "gcp xs [] = []"
 
 lemma gcp_append [simp]: "gcp (xs @ ys) (xs @ zs) = xs @ gcp ys zs"
   by (induct xs, auto)
-  
+
 lemma gcp_lb1: "prefixeq (gcp xs ys) xs"
   apply (induct xs arbitrary: ys, auto)
   apply (case_tac ys, auto)
@@ -368,10 +375,10 @@ text {* Extra laws to do with prefix and order *}
 lemma lexord_append:
   assumes "(xs\<^sub>1 @ ys\<^sub>1, xs\<^sub>2 @ ys\<^sub>2) \<in> lexord R" "length(xs\<^sub>1) = length(xs\<^sub>2)"
   shows "(xs\<^sub>1, xs\<^sub>2) \<in> lexord R \<or> (xs\<^sub>1 = xs\<^sub>2 \<and> (ys\<^sub>1, ys\<^sub>2) \<in> lexord R)"
-using assms 
+using assms
 proof (induct xs\<^sub>2 arbitrary: xs\<^sub>1)
   case (Cons x\<^sub>2 xs\<^sub>2') note hyps = this
-  from hyps(3) obtain x\<^sub>1 xs\<^sub>1' where xs\<^sub>1: "xs\<^sub>1 = x\<^sub>1 # xs\<^sub>1'" "length(xs\<^sub>1') = length(xs\<^sub>2')" 
+  from hyps(3) obtain x\<^sub>1 xs\<^sub>1' where xs\<^sub>1: "xs\<^sub>1 = x\<^sub>1 # xs\<^sub>1'" "length(xs\<^sub>1') = length(xs\<^sub>2')"
     by (auto, metis Suc_length_conv)
   with hyps(2) have xcases: "(x\<^sub>1, x\<^sub>2) \<in> R \<or> (xs\<^sub>1' @ ys\<^sub>1, xs\<^sub>2' @ ys\<^sub>2) \<in> lexord R"
     by (auto)
@@ -499,20 +506,20 @@ lemma butlast_prefix_suffix_not_empty:
 lemma length_tl_list_minus_butlast_gt_zero:
   assumes "length s < length t" and "prefix (butlast s) t" and "length s > 0"
   shows "length (tl (t - (butlast s))) > 0"
-  using assms 
+  using assms
   by (metis Nitpick.size_list_simp(2) butlast_snoc hd_Cons_tl length_butlast length_greater_0_conv length_tl less_trans nat_neq_iff prefix_minus_not_empty prefix_order.dual_order.strict_implies_order prefixeq_concat_minus)
-  
+
 lemma prefixeq_and_concat_prefixeq_is_concat_prefixeq:
   assumes "prefixeq s t" "prefixeq (e @ t) u"
   shows "prefixeq (e @ s) u"
   using assms prefix_order.dual_order.trans same_prefixeq_prefixeq by blast
-  
+
 lemma list_minus_butlast_eq_butlast_list:
   assumes "length t = length s" and "prefix (butlast s) t"
   shows "t - (butlast s) = [last t]"
   using assms
-  by (metis append_butlast_last_id append_eq_append_conv butlast.simps(1) length_butlast less_numeral_extra(3) list.size(3) prefix_order.dual_order.strict_implies_order prefixeq_concat_minus prefixeq_length_less) 
- 
+  by (metis append_butlast_last_id append_eq_append_conv butlast.simps(1) length_butlast less_numeral_extra(3) list.size(3) prefix_order.dual_order.strict_implies_order prefixeq_concat_minus prefixeq_length_less)
+
 lemma prefix_eq_exists:
   "prefix s t \<longleftrightarrow> (\<exists>xs . s @ xs = t \<and> (length xs) > 0)"
   by (metis append_minus length_greater_0_conv prefix_def prefix_minus_not_empty prefixeq_def)
@@ -520,14 +527,14 @@ lemma prefix_eq_exists:
 lemma prefixeq_eq_exists:
   "prefixeq s t \<longleftrightarrow> (\<exists>xs . s @ xs = t)"
   using prefixeq_concat_minus by auto
-  
+
 lemma butlast_prefix_eq_butlast:
   assumes "length s = length t" and "prefix (butlast s) t"
   shows "prefix (butlast s) t \<longleftrightarrow> (butlast s) = (butlast t)"
   by (metis append_butlast_last_id append_eq_append_conv assms(1) assms(2) length_0_conv length_butlast prefix_eq_exists)
 
 lemma butlast_eq_if_eq_length_and_prefix:
-  assumes "length s > 0" "length z > 0" 
+  assumes "length s > 0" "length z > 0"
           "length s = length z" "prefix (butlast s) t" "prefix (butlast z) t"
   shows   "(butlast s) = (butlast z)"
   using assms by (auto simp add:prefix_eq_exists)
@@ -536,16 +543,16 @@ lemma prefixeq_imp_length_lteq:
   assumes "prefixeq s t"
   shows "length s \<le> length t"
   using assms by (simp add:prefixeq_length_le)
-  
+
 lemma prefixeq_imp_length_not_gt:
   assumes "prefixeq s t"
   shows "\<not> length t < length s"
   using assms by (simp add: leD prefixeq_length_le)
-  
+
 lemma prefixeq_and_eq_length_imp_eq_list:
   assumes "prefixeq s t" and "length t = length s"
   shows "s=t"
-  using assms by (simp add: prefix_length_eq)  
+  using assms by (simp add: prefix_length_eq)
 
 lemma butlast_prefix_length_lt_imp_last_tl_minus_butlast_eq_last:
   assumes "length s > 0" "prefix (butlast s) t" "length s < length t"
@@ -601,6 +608,57 @@ proof -
   finally show ?thesis .
 qed
 
+lemma dropWhile_sorted_le_above:
+  "\<lbrakk> sorted xs; x \<in> set (dropWhile (\<lambda> x. x \<le> n) xs) \<rbrakk> \<Longrightarrow> x > n"
+  apply (induct xs)
+  apply (auto)
+  apply (rename_tac a xs)
+  apply (case_tac "a \<le> n")
+  apply (simp_all)
+  using sorted_Cons apply blast
+  apply (meson dual_order.trans not_less sorted_Cons)
+done
+
+lemma set_dropWhile_le:
+  "sorted xs \<Longrightarrow> set (dropWhile (\<lambda> x. x \<le> n) xs) = {x\<in>set xs. x > n}"
+  apply (induct xs)
+  apply (simp)
+  apply (rename_tac x xs)
+  apply (subgoal_tac "sorted xs")
+  apply (simp)
+  apply (safe)
+  apply (simp_all)
+  apply (meson not_less order_trans sorted_Cons)
+  using sorted_Cons apply auto
+done
+
+lemma set_takeWhile_less_sorted: 
+  "\<lbrakk> sorted I; x \<in> set I; x < n \<rbrakk> \<Longrightarrow> x \<in> set (takeWhile (\<lambda>x. x < n) I)"
+proof (induct I arbitrary: x)
+  case Nil thus ?case
+    by (simp)
+next
+  case (Cons a I) thus ?case
+    by (auto, (meson le_less_trans sorted_Cons)+)
+qed
+
+lemma nth_le_takeWhile_ord: "\<lbrakk> sorted xs; i \<ge> length (takeWhile (\<lambda> x. x \<le> n) xs); i < length xs \<rbrakk> \<Longrightarrow> n \<le> xs ! i"
+  apply (induct xs arbitrary: i, auto)
+  apply (rename_tac x xs i)
+  apply (case_tac "x \<le> n")
+  apply (auto simp add: sorted_Cons)
+  apply (metis One_nat_def Suc_eq_plus1 le_less_linear le_less_trans less_imp_le list.size(4) nth_mem set_ConsD)
+done
+
+lemma length_takeWhile_less:
+  "\<lbrakk> a \<in> set xs; \<not> P a \<rbrakk> \<Longrightarrow> length (takeWhile P xs) < length xs"
+  by (metis in_set_conv_nth length_takeWhile_le nat_neq_iff not_less set_takeWhileD takeWhile_nth)
+
+lemma nth_length_takeWhile_less:
+  "\<lbrakk> sorted xs; distinct xs; (\<exists> a \<in> set xs. a \<ge> n) \<rbrakk> \<Longrightarrow> xs ! length (takeWhile (\<lambda>x. x < n) xs) \<ge> n"
+  apply (induct xs, auto)
+  using sorted_Cons by blast
+
 text {* Sorting lists according to a relation *}
 
 definition is_sorted_list_of_set_by :: "'a rel \<Rightarrow> 'a set \<Rightarrow> 'a list \<Rightarrow> bool" where
@@ -610,22 +668,22 @@ definition sorted_list_of_set_by :: "'a rel \<Rightarrow> 'a set \<Rightarrow> '
 "sorted_list_of_set_by R A = (THE xs. is_sorted_list_of_set_by R A xs)"
 
 definition fin_set_lexord :: "'a rel \<Rightarrow> 'a set rel" where
-"fin_set_lexord R = {(A, B). finite A \<and> finite B \<and> 
-                             (\<exists> xs ys. is_sorted_list_of_set_by R A xs \<and> is_sorted_list_of_set_by R B ys 
+"fin_set_lexord R = {(A, B). finite A \<and> finite B \<and>
+                             (\<exists> xs ys. is_sorted_list_of_set_by R A xs \<and> is_sorted_list_of_set_by R B ys
                               \<and> (xs, ys) \<in> lexord R)}"
 
 lemma is_sorted_list_of_set_by_mono:
   "\<lbrakk> R \<subseteq> S; is_sorted_list_of_set_by R A xs \<rbrakk> \<Longrightarrow> is_sorted_list_of_set_by S A xs"
   by (auto simp add: is_sorted_list_of_set_by_def)
 
-lemma lexord_mono': 
+lemma lexord_mono':
   "\<lbrakk> (\<And> x y. f x y \<longrightarrow> g x y); (xs, ys) \<in> lexord {(x, y). f x y} \<rbrakk> \<Longrightarrow> (xs, ys) \<in> lexord {(x, y). g x y}"
   by (metis case_prodD case_prodI lexord_take_index_conv mem_Collect_eq)
 
-lemma fin_set_lexord_mono [mono]: 
+lemma fin_set_lexord_mono [mono]:
   "(\<And> x y. f x y \<longrightarrow> g x y) \<Longrightarrow> (xs, ys) \<in> fin_set_lexord {(x, y). f x y} \<longrightarrow> (xs, ys) \<in> fin_set_lexord {(x, y). g x y}"
 proof
-  assume 
+  assume
     fin: "(xs, ys) \<in> fin_set_lexord {(x, y). f x y}" and
     hyp: "(\<And> x y. f x y \<longrightarrow> g x y)"
 
@@ -662,12 +720,12 @@ definition seq_extract :: "nat set \<Rightarrow> 'a list \<Rightarrow> 'a list" 
 lemma seq_extract_Nil [simp]: "A \<upharpoonleft>\<^sub>l [] = []"
   by (simp add: seq_extract_def)
 
-lemma seq_extract_Cons: 
+lemma seq_extract_Cons:
   "A \<upharpoonleft>\<^sub>l (x # xs) = (if 0 \<in> A then [x] else []) @ {j. Suc j \<in> A} \<upharpoonleft>\<^sub>l xs"
   by (simp add: seq_extract_def sublist_Cons)
 
 lemma seq_extract_empty [simp]: "{} \<upharpoonleft>\<^sub>l xs = []"
-  by (simp add: seq_extract_def) 
+  by (simp add: seq_extract_def)
 
 lemma seq_extract_ident [simp]: "{0..<length xs} \<upharpoonleft>\<^sub>l xs = xs"
   unfolding list_eq_iff_nth_eq
@@ -749,7 +807,7 @@ next
   ultimately show ?case
     using Cons upt_rec
     by (auto simp add: seq_extract_Cons_atLeastLessThan)
-qed    
+qed
 
 lemma seq_append_as_extract:
   "xs = ys @ zs \<longleftrightarrow> (\<exists> i\<le>length(xs). ys = {0..<i} \<upharpoonleft>\<^sub>l xs \<and> zs = {i..<length(xs)} \<upharpoonleft>\<^sub>l xs)"
@@ -784,6 +842,26 @@ lemma seq_filter_empty [simp]: "xs \<restriction>\<^sub>l {} = []"
   by (simp add: seq_filter_def)
 
 lemma seq_filter_append: "(xs @ ys) \<restriction>\<^sub>l A = (xs \<restriction>\<^sub>l A) @ (ys \<restriction>\<^sub>l A)"
-  by (simp add: seq_filter_def) 
+  by (simp add: seq_filter_def)
 
+subsection {* Distributed Concatenation *}
+
+definition uncurry :: "('a \<Rightarrow> 'b \<Rightarrow>  'c) \<Rightarrow> ('a \<times> 'b \<Rightarrow> 'c)" where
+[simp]: "uncurry f = (\<lambda>(x, y). f x y)"
+
+definition dist_concat ::
+  "'a list set \<Rightarrow> 'a list set \<Rightarrow> 'a list set" (infixr "\<^sup>\<frown>" 100) where
+"dist_concat ls1 ls2 = (uncurry (op @) ` (ls1 \<times> ls2))"
+
+lemma dist_concat_left_empty [simp]:
+  "{} \<^sup>\<frown> ys = {}"
+  by (simp add: dist_concat_def)
+
+lemma dist_concat_right_empty [simp]:
+  "xs \<^sup>\<frown> {} = {}"
+  by (simp add: dist_concat_def)
+
+lemma dist_concat_insert [simp]:
+"insert l ls1 \<^sup>\<frown> ls2 = ((op @ l) ` ( ls2)) \<union> (ls1 \<^sup>\<frown> ls2)"
+  by (auto simp add: dist_concat_def)
 end
