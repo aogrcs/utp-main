@@ -672,7 +672,8 @@ lemma vdm_sl_op_H1_H3 [closure]:
   "[pre p post Q body R]\<^sub>v is \<^bold>N"
   by (simp add: vdm_sl_op_def, metis H1_rdesign H3_ndesign Healthy_def ndesign_def)
 
-lemma wp_vdm_sl_op [wp]: "[pre p post Q body R]\<^sub>v wp\<^sub>D r = ((\<lfloor>\<D>\<^sub>v(p)\<rfloor>\<^sub>v \<and> \<lfloor>p\<rfloor>\<^sub>v) \<and> (\<lfloor>\<D>\<^sub>v(Q)\<rfloor>\<^sub>v \<and> \<lfloor>Q\<rfloor>\<^sub>v \<and> post\<^sub>D(R)) wp r)"
+lemma wp_vdm_sl_op [wp]: 
+  "[pre p post Q body R]\<^sub>v wp\<^sub>D r = ((\<lfloor>\<D>\<^sub>v(p)\<rfloor>\<^sub>v \<and> \<lfloor>p\<rfloor>\<^sub>v) \<and> (\<lfloor>\<D>\<^sub>v(Q)\<rfloor>\<^sub>v \<and> \<lfloor>Q\<rfloor>\<^sub>v \<and> post\<^sub>D(R)) wp r)"
   by (simp add: vdm_sl_op_def wp)
 
 (*

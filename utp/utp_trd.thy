@@ -91,12 +91,12 @@ translations
 
 lemma var_in_var_prod [simp]:
   fixes x :: "('a, '\<alpha>) uvar"
-  shows "var ((in_var x) ;\<^sub>L X \<times>\<^sub>L Y) = $X:(x)"
+  shows "utp_expr.var ((in_var x) ;\<^sub>L X \<times>\<^sub>L Y) = $X:(x)"
   by (pred_auto)
 
 lemma var_out_var_prod [simp]:
   fixes x :: "('a, '\<alpha>) uvar"
-  shows "var ((out_var x) ;\<^sub>L X \<times>\<^sub>L Y) = $Y\<acute>:(x)"
+  shows "utp_expr.var ((out_var x) ;\<^sub>L X \<times>\<^sub>L Y) = $Y\<acute>:(x)"
   by (pred_auto)
 
 definition ufloor :: "'a::{floor_ceiling} \<Rightarrow> 'a" 
@@ -127,8 +127,8 @@ syntax
   "_time'" :: "logic" ("time'")
 
 translations
-  "time"  == "CONST uop end\<^sub>t (CONST var (CONST ivar CONST tr))"
-  "time'" == "CONST uop end\<^sub>t (CONST var (CONST ovar CONST tr))"
+  "time"  == "CONST uop end\<^sub>t (CONST utp_expr.var (CONST ivar CONST tr))"
+  "time'" == "CONST uop end\<^sub>t (CONST utp_expr.var (CONST ovar CONST tr))"
   "end\<^sub>u(t)" == "CONST uop end\<^sub>t t"
 
 (* Need to lift the continuous predicate to a relation *)
@@ -169,7 +169,7 @@ lemma at_plus [simp]:
 
 lemma at_var [simp]:
   fixes x :: "('a, 'c::topological_space) uvar"
-  shows "var x @\<^sub>u t = \<phi>\<lparr>\<guillemotleft>t\<guillemotright>\<rparr>\<^sub>u:(x)"
+  shows "utp_expr.var x @\<^sub>u t = \<phi>\<lparr>\<guillemotleft>t\<guillemotright>\<rparr>\<^sub>u:(x)"
   by (pred_auto)
 
 definition hInt :: "(real \<Rightarrow> 'c::topological_space upred) \<Rightarrow> ('d,'c) relation_trd" where
@@ -279,7 +279,13 @@ proof -
     apply (case_tac "xb < end\<^sub>t x")
     apply (auto simp add: tt_cat_ext_first tt_cat_ext_last)
     apply (metis add.right_neutral add_less_le_mono tt_cat_ext_first tt_end_ge_0)
-    apply (smt tt_apply_minus tt_append_cancel tt_end_ge_0 tt_prefix_cat)
+    apply (drule_tac x="xb" in spec)
+    apply (auto simp add: add_strict_increasing2)
+
+done
+    
+
+(*
   done
   also have "... = (\<^bold>\<exists> tt \<bullet> ((\<guillemotleft>tt\<guillemotright> >\<^sub>u 0 \<and> (\<^bold>\<forall> t \<in> {0..<end\<^sub>u(\<guillemotleft>tt\<guillemotright>)}\<^sub>u \<bullet> \<lceil>P\<rceil>\<^sub>C\<^sub><\<lbrakk>(\<guillemotleft>tt\<guillemotright>)\<lparr>\<guillemotleft>t\<guillemotright>\<rparr>\<^sub>u/$\<^bold>c\<rbrakk>))) \<and> $tr\<acute> =\<^sub>u $tr + \<guillemotleft>tt\<guillemotright>)"
     apply (rel_auto)
